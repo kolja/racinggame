@@ -13,21 +13,36 @@
             [0.4 1.6 0.5]
             [0.5 1.8 0.3]
             [0.4 2.0 0.4]
-            [0.7 2.2 0.5]])
+            [0.7 2.2 0.5]
+            [0.5 2.4 0.5]
+            [0.6 2.6 0.4]
+            [0.4 2.8 0.5]
+            [0.5 3.0 0.3]
+            [0.4 3.2 0.4]
+            [0.7 3.4 0.5]
+            [0.5 3.6 0.5]
+            [0.6 3.8 0.4]
+            [0.4 4.0 0.5]
+            [0.5 4.2 0.3]
+            [0.4 4.4 0.4]
+            [0.7 4.6 0.5]])
 
 (defn setup []
   (q/frame-rate 70)
   (q/color-mode :hsb)
   {:track track
    :car {:x-offset 0.5
+         :y-offset (second (last track))
          :speed {:x 0
                  :y -0.005}}
-   :camera {:y-offset (second (last track))}})
+   :camera {:x-offset 0
+            :y-offset 0}})
 
 (defn update-state [state]
   (-> state
-      (update-in [:camera :y-offset] + (-> state :car :speed :y))
-      (update-in [:car :x-offset] + (-> state :car :speed :x))))
+      (update-in [:car :y-offset] + (-> state :car :speed :y))
+      (update-in [:car :x-offset] + (-> state :car :speed :x))
+      (assoc :camera (select-keys (-> state :car) [:x-offset :y-offset]))))
 
 (defn segment->points [[x y width]]
   {:left [(- x (/ width 2)) y]
@@ -40,14 +55,23 @@
   (logical->screen 500 [0.6 0.7])
   (partition 2 1 [1 2 3])
   )
+
 (defn key-pressed [state event]
-  (case (:key event) 
+  (case (:key event)
     :left (assoc-in state [:car :speed :x] -0.005)
     :right (assoc-in state [:car :speed :x] 0.005)
     state))
 
+(defn key-released [state]
+; (q/key-as-keyword)
+  (assoc-in state [:car :speed :x] 0))
+
 (defn draw-state [state]
   (q/background 240)
+  (let [offset-x (/ (q/width) 2)
+        offset-y (/ (q/height) 2)]
+    (q/translate (- offset-x (* (q/width) (-> state :camera :x-offset)))
+                 (- offset-y (* (q/width) (-> state :camera :y-offset)))))
   (let [track (:track state)
         points (map segment->points track)
         points-clockwise (concat (map :right points)
@@ -67,7 +91,7 @@
 
 (q/defsketch racinggame
   :title "You spin my circle right round"
-  :size [200 800]
+  :size [200 200]
   ; setup function called only once, during sketch initialization.
   :setup setup
   ; update-state is called on each iteration before draw-state.
@@ -78,4 +102,5 @@
   ; Check quil wiki for more info about middlewares and particularly
   ; fun-mode.
   :key-pressed key-pressed
+  :key-released key-released
   :middleware [m/fun-mode])
